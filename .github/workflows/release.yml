@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions: {}
+
+jobs:
+  check-release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate tag format
+        run: |
+          if [[ ! "${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+[a-z]?$ ]]; then
+            echo "Invalid tag format: ${{ github.ref_name }}"
+            echo "Expected format: v1.2.3 or v1.2.3a"
+            exit 1
+          fi
+
+  build-x64:
+    needs: check-release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Build
+        run: make
+      - name: Rename binary
+        run: mv ttembed ttembed-linux-x64
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ttembed-linux-x64
+          path: ttembed-linux-x64
+
+  build-arm64:
+    needs: check-release
+    runs-on: ubuntu-24.04-arm64
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Build
+        run: make
+      - name: Rename binary
+        run: mv ttembed ttembed-linux-arm64
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ttembed-linux-arm64
+          path: ttembed-linux-arm64
+
+  release:
+    needs: [build-x64, build-arm64]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+        with:
+          files: artifacts/*
