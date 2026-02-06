@@ -1,6 +1,8 @@
 ttembed
 =======
 
+> **Note:** This is a mirror. I am not the original author.
+
 NOTE: Archived 22 December 2022. I have no further interest in this project.
 
 Remove embedding limitations from TrueType fonts, by setting the fsType field
