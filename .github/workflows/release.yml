@@ -47,8 +47,20 @@ jobs:
           name: ttembed-linux-arm64
           path: ttembed-linux-arm64
 
+  build-windows-x64:
+    needs: check-release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Build
+        run: gcc -O2 -o ttembed-windows-x64.exe ttembed.c
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ttembed-windows-x64
+          path: ttembed-windows-x64.exe
+
   release:
-    needs: [build-x64, build-arm64]
+    needs: [build-x64, build-arm64, build-windows-x64]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
