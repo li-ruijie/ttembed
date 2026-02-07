@@ -24,40 +24,158 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - name: Build
+      - name: Build dynamic binary
         run: make
-      - name: Rename binary
+      - name: Strip dynamic binary
+        run: strip --strip-all ttembed
+      - name: Create dynamic .deb package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PKG=$(mktemp -d)
+          install -Dm755 ttembed   "$PKG/usr/bin/ttembed"
+          install -Dm644 ttembed.1 "$PKG/usr/share/man/man1/ttembed.1"
+          mkdir -p "$PKG/DEBIAN"
+          cat > "$PKG/DEBIAN/control" <<EOF
+          Package: ttembed
+          Version: ${VERSION}
+          Architecture: amd64
+          Maintainer: ttembed build <noreply@github.com>
+          Depends: libc6
+          Conflicts: ttembed-static
+          Replaces: ttembed-static
+          Description: Remove embedding restrictions from TrueType/OpenType fonts
+           Sets the fsType field of the OS/2 table to zero and recalculates
+           the table checksum.
+          Section: utils
+          Priority: optional
+          EOF
+          dpkg-deb --build "$PKG" "ttembed_${VERSION}_amd64.deb"
+      - name: Rename dynamic binary
         run: mv ttembed ttembed-linux-x64
+      - name: Build static binary
+        run: make LDFLAGS="-static"
+      - name: Strip static binary
+        run: strip --strip-all ttembed
+      - name: Create static .deb package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PKG=$(mktemp -d)
+          install -Dm755 ttembed   "$PKG/usr/bin/ttembed"
+          install -Dm644 ttembed.1 "$PKG/usr/share/man/man1/ttembed.1"
+          mkdir -p "$PKG/DEBIAN"
+          cat > "$PKG/DEBIAN/control" <<EOF
+          Package: ttembed-static
+          Version: ${VERSION}
+          Architecture: amd64
+          Maintainer: ttembed build <noreply@github.com>
+          Conflicts: ttembed
+          Replaces: ttembed
+          Description: Remove embedding restrictions from TrueType/OpenType fonts (static)
+           Sets the fsType field of the OS/2 table to zero and recalculates
+           the table checksum.
+          Section: utils
+          Priority: optional
+          EOF
+          dpkg-deb --build "$PKG" "ttembed-static_${VERSION}_amd64.deb"
+      - name: Rename static binary
+        run: mv ttembed ttembed-linux-x64-static
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: ttembed-linux-x64
-          path: ttembed-linux-x64
+          path: |
+            ttembed-linux-x64
+            ttembed-linux-x64-static
+            ttembed_*_amd64.deb
+            ttembed-static_*_amd64.deb
 
   build-arm64:
     needs: check-release
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - name: Build
+      - name: Build dynamic binary
         run: make
-      - name: Rename binary
+      - name: Strip dynamic binary
+        run: strip --strip-all ttembed
+      - name: Create dynamic .deb package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PKG=$(mktemp -d)
+          install -Dm755 ttembed   "$PKG/usr/bin/ttembed"
+          install -Dm644 ttembed.1 "$PKG/usr/share/man/man1/ttembed.1"
+          mkdir -p "$PKG/DEBIAN"
+          cat > "$PKG/DEBIAN/control" <<EOF
+          Package: ttembed
+          Version: ${VERSION}
+          Architecture: arm64
+          Maintainer: ttembed build <noreply@github.com>
+          Depends: libc6
+          Conflicts: ttembed-static
+          Replaces: ttembed-static
+          Description: Remove embedding restrictions from TrueType/OpenType fonts
+           Sets the fsType field of the OS/2 table to zero and recalculates
+           the table checksum.
+          Section: utils
+          Priority: optional
+          EOF
+          dpkg-deb --build "$PKG" "ttembed_${VERSION}_arm64.deb"
+      - name: Rename dynamic binary
         run: mv ttembed ttembed-linux-arm64
+      - name: Build static binary
+        run: make LDFLAGS="-static"
+      - name: Strip static binary
+        run: strip --strip-all ttembed
+      - name: Create static .deb package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PKG=$(mktemp -d)
+          install -Dm755 ttembed   "$PKG/usr/bin/ttembed"
+          install -Dm644 ttembed.1 "$PKG/usr/share/man/man1/ttembed.1"
+          mkdir -p "$PKG/DEBIAN"
+          cat > "$PKG/DEBIAN/control" <<EOF
+          Package: ttembed-static
+          Version: ${VERSION}
+          Architecture: arm64
+          Maintainer: ttembed build <noreply@github.com>
+          Conflicts: ttembed
+          Replaces: ttembed
+          Description: Remove embedding restrictions from TrueType/OpenType fonts (static)
+           Sets the fsType field of the OS/2 table to zero and recalculates
+           the table checksum.
+          Section: utils
+          Priority: optional
+          EOF
+          dpkg-deb --build "$PKG" "ttembed-static_${VERSION}_arm64.deb"
+      - name: Rename static binary
+        run: mv ttembed ttembed-linux-arm64-static
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: ttembed-linux-arm64
-          path: ttembed-linux-arm64
+          path: |
+            ttembed-linux-arm64
+            ttembed-linux-arm64-static
+            ttembed-static_*_arm64.deb
+            ttembed_*_arm64.deb
 
   build-windows-x64:
     needs: check-release
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - name: Build
+      - name: Build dynamic binary
         run: gcc -O2 -o ttembed-windows-x64.exe ttembed.c
+      - name: Strip dynamic binary
+        run: strip --strip-all ttembed-windows-x64.exe
+      - name: Build static binary
+        run: gcc -O2 -static -o ttembed-windows-x64-static.exe ttembed.c
+      - name: Strip static binary
+        run: strip --strip-all ttembed-windows-x64-static.exe
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: ttembed-windows-x64
-          path: ttembed-windows-x64.exe
+          path: |
+            ttembed-windows-x64.exe
+            ttembed-windows-x64-static.exe
 
   release:
     needs: [build-x64, build-arm64, build-windows-x64]
