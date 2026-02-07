@@ -1,10 +1,8 @@
 # ttembed
 
-> This is a mirror. I am not the original author.
+> This is a fork of "embed" by [Tom Murphy VII](http://carnage-melon.tom7.org/embed/), which was released into the public domain.
 
 Remove embedding limitations from TrueType fonts by setting the `fsType` field in the OS/2 table to zero.
-
-Based on "embed" by [Tom Murphy VII](http://carnage-melon.tom7.org/embed/).
 
 ## Usage
 

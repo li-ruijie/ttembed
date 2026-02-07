@@ -13,15 +13,24 @@ jobs:
     steps:
       - name: Validate tag format
         run: |
-          if [[ ! "${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+[a-z]?$ ]]; then
-            echo "Invalid tag format: ${{ github.ref_name }}"
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+[a-z]?$ ]]; then
+            echo "Invalid tag format: $GITHUB_REF_NAME"
             echo "Expected format: v1.2.3 or v1.2.3a"
             exit 1
           fi
 
-  build-x64:
+  build-linux:
     needs: check-release
-    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+            suffix: x64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            suffix: arm64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Build dynamic binary
@@ -38,7 +47,7 @@ jobs:
           cat > "$PKG/DEBIAN/control" <<EOF
           Package: ttembed
           Version: ${VERSION}
-          Architecture: amd64
+          Architecture: ${{ matrix.arch }}
           Maintainer: ttembed build <noreply@github.com>
           Depends: libc6
           Conflicts: ttembed-static
@@ -49,9 +58,9 @@ jobs:
           Section: utils
           Priority: optional
           EOF
-          dpkg-deb --build "$PKG" "ttembed_${VERSION}_amd64.deb"
+          dpkg-deb --build "$PKG" "ttembed_${VERSION}_${{ matrix.arch }}.deb"
       - name: Rename dynamic binary
-        run: mv ttembed ttembed-linux-x64
+        run: mv ttembed ttembed-linux-${{ matrix.suffix }}
       - name: Build static binary
         run: make LDFLAGS="-static"
       - name: Strip static binary
@@ -66,7 +75,7 @@ jobs:
           cat > "$PKG/DEBIAN/control" <<EOF
           Package: ttembed-static
           Version: ${VERSION}
-          Architecture: amd64
+          Architecture: ${{ matrix.arch }}
           Maintainer: ttembed build <noreply@github.com>
           Conflicts: ttembed
           Replaces: ttembed
@@ -76,86 +85,17 @@ jobs:
           Section: utils
           Priority: optional
           EOF
-          dpkg-deb --build "$PKG" "ttembed-static_${VERSION}_amd64.deb"
+          dpkg-deb --build "$PKG" "ttembed-static_${VERSION}_${{ matrix.arch }}.deb"
       - name: Rename static binary
-        run: mv ttembed ttembed-linux-x64-static
+        run: mv ttembed ttembed-linux-${{ matrix.suffix }}-static
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: ttembed-linux-x64
+          name: ttembed-linux-${{ matrix.suffix }}
           path: |
-            ttembed-linux-x64
-            ttembed-linux-x64-static
-            ttembed_*_amd64.deb
-            ttembed-static_*_amd64.deb
-
-  build-arm64:
-    needs: check-release
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - name: Build dynamic binary
-        run: rm -f ttembed && make
-      - name: Strip dynamic binary
-        run: strip --strip-all ttembed
-      - name: Create dynamic .deb package
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          PKG=$(mktemp -d)
-          install -Dm755 ttembed   "$PKG/usr/bin/ttembed"
-          install -Dm644 ttembed.1 "$PKG/usr/share/man/man1/ttembed.1"
-          mkdir -p "$PKG/DEBIAN"
-          cat > "$PKG/DEBIAN/control" <<EOF
-          Package: ttembed
-          Version: ${VERSION}
-          Architecture: arm64
-          Maintainer: ttembed build <noreply@github.com>
-          Depends: libc6
-          Conflicts: ttembed-static
-          Replaces: ttembed-static
-          Description: Remove embedding restrictions from TrueType/OpenType fonts
-           Sets the fsType field of the OS/2 table to zero and recalculates
-           the table checksum.
-          Section: utils
-          Priority: optional
-          EOF
-          dpkg-deb --build "$PKG" "ttembed_${VERSION}_arm64.deb"
-      - name: Rename dynamic binary
-        run: mv ttembed ttembed-linux-arm64
-      - name: Build static binary
-        run: make LDFLAGS="-static"
-      - name: Strip static binary
-        run: strip --strip-all ttembed
-      - name: Create static .deb package
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          PKG=$(mktemp -d)
-          install -Dm755 ttembed   "$PKG/usr/bin/ttembed"
-          install -Dm644 ttembed.1 "$PKG/usr/share/man/man1/ttembed.1"
-          mkdir -p "$PKG/DEBIAN"
-          cat > "$PKG/DEBIAN/control" <<EOF
-          Package: ttembed-static
-          Version: ${VERSION}
-          Architecture: arm64
-          Maintainer: ttembed build <noreply@github.com>
-          Conflicts: ttembed
-          Replaces: ttembed
-          Description: Remove embedding restrictions from TrueType/OpenType fonts (static)
-           Sets the fsType field of the OS/2 table to zero and recalculates
-           the table checksum.
-          Section: utils
-          Priority: optional
-          EOF
-          dpkg-deb --build "$PKG" "ttembed-static_${VERSION}_arm64.deb"
-      - name: Rename static binary
-        run: mv ttembed ttembed-linux-arm64-static
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
-        with:
-          name: ttembed-linux-arm64
-          path: |
-            ttembed-linux-arm64
-            ttembed-linux-arm64-static
-            ttembed-static_*_arm64.deb
-            ttembed_*_arm64.deb
+            ttembed-linux-${{ matrix.suffix }}
+            ttembed-linux-${{ matrix.suffix }}-static
+            ttembed_*_${{ matrix.arch }}.deb
+            ttembed-static_*_${{ matrix.arch }}.deb
 
   build-windows-x64:
     needs: check-release
@@ -178,7 +118,7 @@ jobs:
             ttembed-windows-x64-static.exe
 
   release:
-    needs: [build-x64, build-arm64, build-windows-x64]
+    needs: [build-linux, build-windows-x64]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

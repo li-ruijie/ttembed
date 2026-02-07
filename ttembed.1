@@ -1,19 +1,80 @@
-.TH TTEMBED "1" "2013-12-01"
+.TH TTEMBED "1" "2026-02-07"
 .SH NAME
-ttembed \- remove embedding restrictions from TrueType files
+ttembed \- remove embedding restrictions from TrueType/OpenType fonts
 .SH SYNOPSIS
 .B ttembed
-.RI "[" "-n" "] " fontfile
+.RI "[" "-n" "] " "fontfile ..."
 .SH DESCRIPTION
-.\" Add any additional description here
 .B ttembed
-sets the
+removes font embedding restrictions by setting the
 .B fsType
-field of the OS/2 table to zero and recalculates the OS/2 table's
-checksum.
-.SH OPTIONS
-.IP "-n"
-Dry-run mode, which just displays the fsType field and filename
-of the given fonts if it is non-zero (i.e. if
+field of the OS/2 table to zero and recalculating the table checksum.
+.PP
+TrueType and OpenType fonts contain an
+.B fsType
+field that specifies embedding and subsetting permissions.
+Some fonts set this field to restrict embedding in documents
+(e.g. PDFs, word processor files).
 .B ttembed
-would change it.
+clears these restrictions by zeroing the field.
+.PP
+Both TrueType (\fB.ttf\fR) and OpenType (\fB.otf\fR) fonts are supported.
+Multiple fonts can be processed in a single invocation.
+Files are modified in place.
+.SH OPTIONS
+.TP
+.B \-n
+Dry-run mode.
+Reports the
+.B fsType
+value and filename for each font that has a non-zero value,
+without modifying any files.
+Output format:
+.RS
+.PP
+.nf
+fstype=\fIXXXX\fR \fIfilename\fR
+.fi
+.RE
+.SH EXIT STATUS
+.B ttembed
+always returns 0.
+Errors for individual files are reported to standard error
+but do not affect processing of remaining files.
+.SH EXAMPLES
+Remove restrictions from a single font:
+.PP
+.RS
+.nf
+ttembed font.ttf
+.fi
+.RE
+.PP
+Check which system fonts have restrictions:
+.PP
+.RS
+.nf
+find /usr/share/fonts \-iname '*.?tf' \-print0 | xargs \-0 ttembed \-n
+.fi
+.RE
+.SH DIAGNOSTICS
+.TP
+.IB filename ": Not TTF/OTF"
+The file does not begin with a valid TrueType or OpenType magic number.
+.TP
+.IB filename ": Malformed TTF"
+The font file is truncated or has a corrupt table directory.
+.TP
+.IB filename ": No OS/2 table"
+The font does not contain an OS/2 table.
+.SH AUTHORS
+Originally written by Tom Murphy VII and released into the public domain.
+.PP
+Fork maintained by Li Ruijie.
+.SH COPYRIGHT
+Copyright \(co 2013 Tom Murphy VII (original, public domain)
+.br
+Copyright \(co 2026 Li Ruijie
+.PP
+Licensed under the GNU General Public License v3.0 or later.
+See the LICENSE file or <https://www.gnu.org/licenses/gpl-3.0.html>.
